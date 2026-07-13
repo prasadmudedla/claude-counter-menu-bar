@@ -102,8 +102,12 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" build/*.dmg build/SHA256SUMS.txt --clobber
           else
+            RELEASE_ARGS=(--title "$TAG" --target "$GITHUB_SHA")
+            if [[ "$SIGNING_ENABLED" == "true" ]]; then
+              RELEASE_ARGS+=(--generate-notes)
+            else
+              RELEASE_ARGS+=(--prerelease --notes "Unsigned testing build. macOS Gatekeeper will warn because this DMG has not been signed with an Apple Developer ID or notarized.")
+            fi
             gh release create "$TAG" build/*.dmg build/SHA256SUMS.txt \
-              --title "$TAG" \
-              --generate-notes \
-              --target "$GITHUB_SHA"
+              "${RELEASE_ARGS[@]}"
           fi

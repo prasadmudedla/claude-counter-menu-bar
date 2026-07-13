@@ -4,7 +4,7 @@ GitHub Actions creates a DMG whenever a tag beginning with `v` is pushed. The re
 
 ## Create an unsigned test release
 
-No secrets are required. The asset name contains `-unsigned`, and macOS Gatekeeper will warn users because it has not been signed by an identified Apple developer or notarized.
+No secrets are required. The asset name contains `-unsigned`, and the workflow marks it as a prerelease. macOS Gatekeeper will warn users because it has not been signed by an identified Apple developer or notarized.
 
 ```sh
 git tag v1.0.0
