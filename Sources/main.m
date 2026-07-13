@@ -1,11 +1,13 @@
 #import <AppKit/AppKit.h>
 #import <WebKit/WebKit.h>
 
-@interface ClaudeUsageApp : NSObject <NSApplicationDelegate, WKNavigationDelegate, NSWindowDelegate>
+@interface ClaudeUsageApp : NSObject <NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, NSWindowDelegate>
 @property(nonatomic, strong) NSStatusItem *statusItem;
 @property(nonatomic, strong) NSMenu *menu;
 @property(nonatomic, strong) WKWebView *webView;
 @property(nonatomic, strong) NSWindow *loginWindow;
+@property(nonatomic, strong) NSWindow *authWindow;
+@property(nonatomic, strong) WKWebView *authWebView;
 @property(nonatomic, strong) NSTimer *timer;
 @property(nonatomic, copy) NSArray<NSDictionary *> *limits;
 @property(nonatomic, copy) NSString *statusMessage;
@@ -79,6 +81,7 @@
     self.webView = [[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 980, 720)
                                       configuration:configuration];
     self.webView.navigationDelegate = self;
+    self.webView.UIDelegate = self;
 
     [self rebuildMenu];
     [self.webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://claude.ai"]]];
@@ -87,6 +90,37 @@
                                                 selector:@selector(refreshUsage)
                                                 userInfo:nil
                                                  repeats:YES];
+}
+
+- (WKWebView *)webView:(WKWebView *)webView
+createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
+   forNavigationAction:(WKNavigationAction *)navigationAction
+        windowFeatures:(WKWindowFeatures *)windowFeatures {
+    self.authWebView = [[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 760, 680)
+                                         configuration:configuration];
+    self.authWebView.navigationDelegate = self;
+    self.authWebView.UIDelegate = self;
+
+    self.authWindow = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 760, 680)
+                                                   styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
+                                                             NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable
+                                                     backing:NSBackingStoreBuffered
+                                                       defer:NO];
+    self.authWindow.title = @"Claude Usage – Identity Provider";
+    self.authWindow.contentView = self.authWebView;
+    self.authWindow.releasedWhenClosed = NO;
+    self.authWindow.delegate = self;
+    [self.authWindow center];
+    [self.authWindow makeKeyAndOrderFront:nil];
+    return self.authWebView;
+}
+
+- (void)webViewDidClose:(WKWebView *)webView {
+    if (webView == self.authWebView) {
+        [self.authWindow orderOut:nil];
+        self.authWindow = nil;
+        self.authWebView = nil;
+    }
 }
 
 - (void)applicationWillTerminate:(NSNotification *)notification {
@@ -178,6 +212,7 @@ decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
             [self rebuildMenu];
             if (presentMenuAfterLogin) {
                 if (self.loginWindow.isVisible) [self.loginWindow orderOut:nil];
+                if (self.authWindow.isVisible) [self.authWindow orderOut:nil];
                 dispatch_async(dispatch_get_main_queue(), ^{
                     [self.statusItem.button performClick:nil];
                 });
@@ -313,10 +348,12 @@ decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
 
     [self.menu addItem:[NSMenuItem separatorItem]];
     [self addMenuItem:@"Refresh" action:@selector(refreshUsage) key:@"r" enabled:!self.loading];
-    [self addMenuItem:(self.limits.count ? @"Manage Claude Session…" : @"Sign In with Email…")
+    [self addMenuItem:(self.limits.count ? @"Manage Claude Session…" : @"Sign In to Claude…")
                 action:@selector(showLoginWindow) key:@"l" enabled:YES];
     if (!self.limits.count) {
-        [self addMenuItem:@"Open Login Link from Clipboard"
+        [self addMenuItem:@"Enterprise SSO…"
+                    action:@selector(showSSOLogin) key:@"s" enabled:YES];
+        [self addMenuItem:@"Open Email Login Link from Clipboard"
                     action:@selector(openLoginLinkFromClipboard) key:@"v" enabled:YES];
     }
     [self addMenuItem:@"Clear Companion Login" action:@selector(clearLogin) key:@"" enabled:YES];
@@ -369,11 +406,11 @@ decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
                                                                  NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable
                                                          backing:NSBackingStoreBuffered
                                                            defer:NO];
-        self.loginWindow.title = @"Claude Usage – Sign In with Email";
+        self.loginWindow.title = @"Claude Usage – Sign In";
 
         NSView *container = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 980, 720)];
         NSTextField *hint = [NSTextField labelWithString:
-            @"Personal: use email. Enterprise: complete SSO, then select the organization to monitor."];
+            @"Enterprise: enter your work email and choose Continue with SSO. Personal: use email login."];
         hint.frame = NSMakeRect(20, 681, 940, 24);
         hint.alignment = NSTextAlignmentCenter;
         hint.textColor = NSColor.secondaryLabelColor;
@@ -398,6 +435,14 @@ decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
     if (!self.webView.URL) {
         [self.webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://claude.ai"]]];
     }
+}
+
+- (void)showSSOLogin {
+    [self showLoginWindow];
+    self.loginWindow.title = @"Claude Usage – Enterprise SSO";
+    self.statusMessage = @"Complete enterprise SSO…";
+    [self rebuildMenu];
+    [self.webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://claude.ai/login"]]];
 }
 
 - (void)openLoginLinkFromClipboard {
@@ -434,6 +479,7 @@ decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
                 typeof(self) self = weakSelf;
                 if (!self) return;
                 self.limits = @[];
+                self.hasPresentedUsageMenu = NO;
                 self.statusMessage = @"Sign in required";
                 [self rebuildMenu];
                 [self.webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://claude.ai"]]];

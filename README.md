@@ -11,7 +11,7 @@ Each available limit includes a compact live countdown, for example `5-hour: 12%
 - Seat-based Enterprise organizations show every rolling quota returned by Claude, including session, weekly, model, OAuth-app, Design, and Cowork buckets.
 - Metered Enterprise organizations may not have 5-hour or weekly allowances. When available, the app shows monthly spend versus the configured cap and a blocked state instead.
 - The app tracks whichever organization is active in its Claude session. Use **Manage Claude Session…** to switch organizations, then select **Refresh**. Organization metadata is not displayed in the menu.
-- SSO redirects are allowed inside the companion, but an organization's identity provider can prohibit embedded browsers. That policy is controlled by the enterprise administrator and cannot be bypassed by this app.
+- Use **Enterprise SSO…**, enter the work email at Claude's login page, and choose **Continue with SSO**. Identity-provider popup windows share the companion's isolated WebKit session. An organization's IdP can still prohibit embedded browsers; that policy is controlled by the enterprise administrator and cannot be bypassed by this app.
 
 ## Privacy
 
@@ -24,10 +24,10 @@ Each available limit includes a compact live countdown, for example `5-hour: 12%
 
 1. Launch **Claude Usage**.
 2. Select its robot icon in the macOS menu bar.
-3. Choose **Sign In with Email…**, enter the email address attached to your Claude account, and select **Continue with email**. Google OAuth may reject embedded app windows.
-4. In the secure email, copy the login link address instead of opening it in your regular browser.
-5. From the menu-bar app, choose **Open Login Link from Clipboard**. The link opens in the companion's own session.
-6. Close the sign-in window. Usage refreshes automatically every minute.
+3. Personal account: choose **Sign In to Claude…** and continue with email.
+4. Enterprise account: choose **Enterprise SSO…**, enter your work email, and select **Continue with SSO**. No magic-link email is required when SSO is enforced.
+5. Personal email fallback: copy the secure login link address and choose **Open Email Login Link from Clipboard** so it opens in the companion's session.
+6. Complete any identity-provider popup. The sign-in windows close after usage is loaded, and usage refreshes automatically every minute.
 
 Login links are sensitive and normally work once. If one has already been opened, request a fresh email before copying it.
 
