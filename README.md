@@ -2,6 +2,8 @@
 
 A small native macOS menu-bar companion that displays Claude usage limits behind a lightweight robot icon. It leaves the official Claude Desktop application untouched, so Claude Code and Cowork retain their normal integrity checks.
 
+Each available limit includes a compact live countdown, for example `5-hour: 12% · resets in 2h 18m`. Hovering the row shows the absolute local reset date and time.
+
 > This is an unofficial companion and is not affiliated with or endorsed by Anthropic.
 
 ## Enterprise accounts

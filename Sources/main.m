@@ -265,6 +265,11 @@ decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
 }
 
 - (NSDate *)dateFromValue:(id)value {
+    if ([value isKindOfClass:[NSNumber class]]) {
+        double timestamp = [value doubleValue];
+        if (timestamp > 100000000000.0) timestamp /= 1000.0;
+        return [NSDate dateWithTimeIntervalSince1970:timestamp];
+    }
     if (![value isKindOfClass:[NSString class]]) return nil;
     static NSISO8601DateFormatter *fractional;
     static NSISO8601DateFormatter *standard;
@@ -294,9 +299,11 @@ decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
             NSString *title = value.length
                 ? [NSString stringWithFormat:@"%@: %@", limit[@"label"], value]
                 : [NSString stringWithFormat:@"%@: %ld%%", limit[@"label"], (long)percent];
+            NSDate *reset = [limit[@"reset"] isKindOfClass:[NSDate class]] ? limit[@"reset"] : nil;
+            NSString *countdown = [self resetCountdown:reset];
+            if (countdown.length) title = [NSString stringWithFormat:@"%@ · %@", title, countdown];
             NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:title action:nil keyEquivalent:@""];
             item.enabled = NO;
-            NSDate *reset = [limit[@"reset"] isKindOfClass:[NSDate class]] ? limit[@"reset"] : nil;
             item.toolTip = [self resetDescription:reset];
             [self.menu addItem:item];
             if (summary.count < 2) [summary addObject:[NSString stringWithFormat:@"%ld%%", (long)percent]];
@@ -330,6 +337,29 @@ decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
     formatter.dateStyle = NSDateFormatterMediumStyle;
     formatter.timeStyle = NSDateFormatterShortStyle;
     return [NSString stringWithFormat:@"Resets %@", [formatter stringFromDate:date]];
+}
+
+- (NSString *)resetCountdown:(NSDate *)date {
+    if (!date) return nil;
+    NSTimeInterval seconds = date.timeIntervalSinceNow;
+    if (seconds <= 0) return @"reset pending";
+
+    NSInteger minutes = MAX(1, (NSInteger)ceil(seconds / 60.0));
+    NSInteger days = minutes / (24 * 60);
+    NSInteger hours = (minutes % (24 * 60)) / 60;
+    NSInteger remainingMinutes = minutes % 60;
+
+    if (days > 0) {
+        return hours > 0
+            ? [NSString stringWithFormat:@"resets in %ldd %ldh", (long)days, (long)hours]
+            : [NSString stringWithFormat:@"resets in %ldd", (long)days];
+    }
+    if (hours > 0) {
+        return remainingMinutes > 0
+            ? [NSString stringWithFormat:@"resets in %ldh %ldm", (long)hours, (long)remainingMinutes]
+            : [NSString stringWithFormat:@"resets in %ldh", (long)hours];
+    }
+    return [NSString stringWithFormat:@"resets in %ldm", (long)remainingMinutes];
 }
 
 - (void)showLoginWindow {
