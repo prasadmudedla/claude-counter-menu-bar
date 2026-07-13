@@ -38,3 +38,7 @@ Requirements: macOS 13 or newer, Apple Silicon, and Xcode Command Line Tools.
 ```
 
 The ad-hoc signed application and distributable ZIP are written to `build/`.
+
+## Releases
+
+The repository includes a tag-driven GitHub Actions workflow that builds a DMG, generates a SHA-256 checksum, and publishes both to GitHub Releases. See [DISTRIBUTION.md](DISTRIBUTION.md) for unsigned testing and Apple Developer ID notarization setup.

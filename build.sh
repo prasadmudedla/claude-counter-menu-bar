@@ -4,6 +4,8 @@ set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 APP="$ROOT/build/Claude Usage.app"
 MACOS="$APP/Contents/MacOS"
+VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$ROOT/Info.plist")
+SIGN_IDENTITY=${SIGN_IDENTITY:-}
 
 rm -rf "$ROOT/build"
 mkdir -p "$MACOS"
@@ -22,6 +24,11 @@ clang \
   "$ROOT/Sources/main.m" \
   -o "$MACOS/ClaudeUsageMenu"
 
-codesign --force --deep --sign - "$APP"
-ditto -c -k --keepParent "$APP" "$ROOT/build/Claude-Usage-Menu-1.0.0-arm64.zip"
+if [ -n "$SIGN_IDENTITY" ]; then
+  codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$APP"
+else
+  codesign --force --sign - "$APP"
+fi
+
+ditto -c -k --keepParent "$APP" "$ROOT/build/Claude-Usage-Menu-$VERSION-arm64.zip"
 echo "Built $APP"
